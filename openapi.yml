@@ -1,0 +1,753 @@
+openapi: '3.0.0'
+info:
+  description: Opium Exchange API
+  version: 0.0.1
+  title: Opium.exhange
+servers:
+  - url: https://trade.opium.exchange/v1
+tags:
+  - name: Login
+    description: Login related endpoints
+  - name: Aggregator
+    description: Right now used only to retrieve last synced block
+  - name: Meta
+    description: Some meta information about backend
+  - name: Wallet
+    description: Crypto wallet related endpoints
+  - name: Orderbook
+    description: Orderbook related endpoints
+  - name: Ticker
+    description: Tickers related endpoints
+  - name: Trades
+    description: Trades related endpoints
+  - name: Orders
+    description: Orders related endpoints
+paths:
+  /auth/loginData:
+    get:
+      summary: Returns login (access token) message to sign
+      tags:
+        - Login
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  types:
+                    type: object
+                    properties:
+                      EIP712Domain:
+                        type: array
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            type:
+                              type: string
+                      Login:
+                        type: array
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            type:
+                              type: string
+                  primaryType:
+                    type: string
+                  domain:
+                    type: object
+                  message:
+                    type: object
+  /aggregator/blockchain/meta:
+    get:
+      tags:
+        - Aggregator
+      summary: Returns lastSyncedBlock
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lastSyncedBlock:
+                    type: number
+  /meta/config:
+    get:
+      tags:
+        - Meta
+      summary: Get current configuration
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  networkId:
+                    type: number
+                  defaults:
+                    type: object
+                    properties:
+                      ticker:
+                        type: string
+                        description: Default ticker
+                      candleSize:
+                        type: string
+                        description: Used for candle graphs
+                  supportedTokens:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      address:
+                        type: string
+                      decimals:
+                        type: number
+                  opiumContracts:
+                    type: object
+                    description: 'Addresses of Opium contracts'
+                    properties:
+                      TokenMinter:
+                        type: string
+                      Match:
+                        type: string
+  /meta/tickers/searchParams:
+    get:
+      summary: Get information about certain type of derivative
+      parameters:
+        - in: query
+          name: type
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  margin:
+                    type: array
+                    description: Array of all margins of this deravitave type
+                    items:
+                      type: string
+                  endTime:
+                      type: array
+                      description: Array of all endTime of this deravitave type
+                      items:
+                        type: string
+                  param:
+                      type: array
+                      description: Array of all custom param of this deravitave type
+                      items:
+                        type: string
+        422:
+          description: Query is not provided
+  /wallet/balance/tokens:
+    get:
+      summary: Get wallet balance
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: authAddress
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    address:
+                      type: string
+                    decimals:
+                      type: number
+                    total:
+                      type: string
+                    allowance:
+                      type: string
+        204:
+          description: No Content
+  /orderbook/formOrder:
+    post:
+      summary: Form an order, so it can be used for creating a transaction
+      description: "To form an EIP712 order message, send order data to /orderbook/formOrder and receive message data and id. Sign EIP712 message and provide id to /orderbook/orders"
+      security:
+        - bearerAuth: []
+      tags:
+      - Orderbook
+      parameters:
+        - in: query
+          name: authAddress
+          schema:
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - ASK
+                    - BID
+                price:
+                  type: number
+                ticker:
+                  type: string
+                quantity:
+                  type: number
+                expiresAt:
+                  type: number
+                currency:
+                  type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  properties:
+                    orderToSign:
+                      type: object
+                      properties:
+                        types:
+                          type: object
+                          properties:
+                            EIP712Domain:
+                              type: array
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                  type:
+                                    type: string
+                            Order:
+                              type: array
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                  type:
+                                    type: string
+                        primaryType:
+                          type: string
+                        domain:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            version:
+                              type: string
+                            verifyingContract:
+                              type: string
+                        message:
+                          $ref: '#/components/schemas/blockchainObjectScheme'
+                    id:
+                      type: string
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        422:
+          description: Unprocessable entity
+        429:
+          description: Too many requests
+  /orderbook/orders:
+    post:
+      summary: Accepts signed orders and pushes them to matching engine
+      security:
+        - bearerAuth: []
+      tags:
+        - Orderbook
+      parameters:
+        - in: query
+          name: authAddress
+          schema:
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                properties:
+                  id:
+                    type: string
+                  signature:
+                    type: string
+      responses:
+        201:
+          description: Created
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Not found
+        409:
+          description: Conflict
+        412:
+          description: Precondition Failed
+        422:
+          description: Unprocessable entity
+        429:
+          description: Too many requests
+  /orderbook/preSubmit:
+    get:
+      summary: Get information about order
+      security:
+        - bearerAuth: []
+      tags:
+        - Orderbook
+      parameters:
+        - in: query
+          name: authAddress
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: ticker
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: action
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: quantity
+          schema:
+            type: number
+          required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  receive:
+                    type: object
+                    properties:
+                      position:
+                        type: number
+                      margin:
+                        type: string
+                  pay:
+                    type: object
+                    properties:
+                      position:
+                        type: number
+                      margin:
+                        type: string
+                      fee:
+                        type: string
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        422:
+          description: Unprocessable entity
+  /orderbook/cancel:
+    get:
+      summary: Cancel order that was not matched
+      security:
+        - bearerAuth: []
+      tags:
+        - Orderbook
+      parameters:
+        - in: query
+          name: authAddress
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: ids
+          schema:
+            type: array
+            items:
+              type: string
+          required: true
+      responses:
+        201:
+          description: Accepted
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        422:
+          description: Unprocessable entity
+        404:
+          description: Not found
+  /tickers:
+    get:
+      tags:
+        - Tickers
+      parameters:
+        - in: query
+          name: endTime
+          schema:
+            type: string
+        - in: query
+          name: margin
+          schema:
+            type: string
+        - in: query
+          name: param
+          schema:
+            type: string
+        - in: query
+          name: subtype
+          schema:
+            type: string
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: searchText
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    hash:
+                      type: string
+                    productTitle:
+                      type : string
+                    executable:
+                      type: boolean
+        204:
+          description: No content
+  /tickers/data/{hash}:
+    get:
+      tags:
+        - Tickers
+      parameters:
+        - in: path
+          name: hash
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    hash:
+                      type: string
+                    longTokenId:
+                      type: string
+                    shortTokenId:
+                      type: string
+                    margin:
+                      type: string
+                    endTime:
+                      type: string
+                    params:
+                      type: array
+                      items:
+                        type: string
+                    oracleId:
+                      type: string
+                    token:
+                      type: string
+                    syntheticId:
+                      type: string
+                    type:
+                      type: string
+                    subType:
+                      type: string
+                    productTitle:
+                      type: string
+                    executable:
+                      type: boolean
+                    hasData:
+                      type: boolean
+                    syntheticMetadata:
+                      type: object
+                    oracleIdMetadata:
+                      type: object
+                    synthetic:
+                      type: string
+                    description:
+                      type: string
+        404:
+          description: Not found
+  /tickers/derivatives:
+    get:
+      tags:
+      - Tickers
+      parameters:
+      - in: query
+        name: tokenIds
+        schema:
+          type: array
+          items:
+            type: string
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    margin:
+                      type: string
+                    endTime:
+                      type: string
+                    params:
+                      type: array
+                      items:
+                        type: string
+                    oracleId:
+                      type: string
+                    token:
+                      type: string
+                    syntheticId:
+                      type: string
+        204:
+          description: No Content
+  /trades/all/address:
+    get:
+      tags:
+      - Trades
+      security:
+        - bearerAuth: []
+      parameters:
+      - in: query
+        name: tokenIds
+        schema:
+          type: array
+          items:
+            type: string
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    trades:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          productTitle:
+                            type: string
+                          timestamp:
+                            type: number
+                          action:
+                            type: string
+                            enum: ['ASK', 'BID']
+                          price:
+                            type: number
+                          quantity:
+                            type: number
+                          txHash:
+                            type: number
+                    swapTrades:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          timestamp:
+                            type: number
+                          leftMakerTokenId:
+                            type: string
+                          leftMakerTokenAmount:
+                            type: number
+                          leftMakerMarginAddress:
+                            type: string
+                          leftMakerMarginAmount:
+                            type: number
+                          rightMakerTokenId:
+                            type: string
+                          rightMakerTokenAmount:
+                            type: number
+                          rightMakerMarginAddress:
+                            type: string
+                          rightMakerMarginAmount:
+                            type: number
+        401:
+          description: No Content
+        403:
+          description: Forbidden
+  /orders/all/address:
+    get:
+      tags:
+      - Orders
+      security:
+        - bearerAuth: []
+      parameters:
+      - in: query
+        name: tokenIds
+        schema:
+          type: array
+          items:
+            type: string
+        required: true
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    trades:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          productTitle:
+                            type: string
+                          createdat:
+                            type: number
+                          exiresat:
+                            type: number
+                          action:
+                            type: string
+                            enum: ['ASK', 'BID']
+                          price:
+                            type: number
+                          quantity:
+                            type: number
+                          filled:
+                            type: number
+                          matching:
+                            type: boolean
+                    swapTrades:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          timestamp:
+                            type: number
+                          makerTokenId:
+                            type: string
+                          makerTokenAmount:
+                            type: number
+                          makerMarginAddress:
+                            type: string
+                          makerMarginAmount:
+                            type: number
+                          takerTokenId:
+                            type: string
+                          takerTokenAmount:
+                            type: number
+                          takerMarginAddress:
+                            type: string
+                          takerMarginAmount:
+                            type: number
+        401:
+          description: No Content
+        403:
+          description: Forbidden
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    blockchainObjectScheme:
+      properties:
+        makerMarginAddress:
+          description: 'Address of the derivative or currency: DAI, USDC, ...'
+          type: string
+        takerMarginAddress:
+          description: 'Address of the derivative or currency: DAI, USDC, ...'
+          type: string
+        makerAddress:
+          description: Address of the creator of the order
+          type: string
+        takerAddress:
+          description: Address of the taker of the order. Zero if taker is not defined
+          type: string
+        senderAddress:
+          type: string
+        relayerAddress:
+          description: Relayer fee receiver
+          type: string
+        affiliateAddress:
+          description: Affiliate fee receiver
+          type: string
+        feeTokenAddress:
+          type: string
+        makerTokenId:
+          description: stringified integer
+          type: string
+        makerTokenAmount:
+          description: stringified integer
+          type: string
+        makerMarginAmount:
+          description: stringified integer
+          type: string
+        takerTokenId:
+          description: Long or short tokenId
+          type: string
+        takerTokenAmount:
+          type: string
+        takerMarginAmount:
+          type: string
+        relayerFee:
+          type: string
+        affiliateFee:
+          type: string
+        nonce:
+          description: timestamp
+          type: string
+        expiresAt:
+          description: timestamp
+          type: string
