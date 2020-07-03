@@ -1,10 +1,29 @@
 openapi: '3.0.0'
 info:
-  description: Opium Exchange API
-  version: 0.0.1
-  title: Opium.exhange
+  version: 1.0.0
+  title: Opium.Exchange
+  description: |-
+    **Description**
+
+    Following specification describes the way to connect to [opium.exchange](https://opium.exchange) relayer of [Opium Protocol](https://opium.network) via REST API and Socket.io endpoint.
+
+    REST API allows to fetch login message for authentication, load currently supported products, tokens and maturities, user tokens balance and allowance state, form, sign and cancel orders, etc.
+
+    Socket.io endpoint allows to reactively receive updates on current orderbook status and charts. Also using access token it's possible to receive updates on statuses of user's orders, performed trades and current active positions.
+
+    **Socket.io**
+    
+    `socket.io` specification which could be found [here](socket.html)
+
+    **Authorization**
+
+    Some of the HTTP and Socket.io endpoints are protected (user-based), thus require to include access token within a request and connection.
+  contact:
+    name: opium.team support
+    email: info@opium.team
+    url: https://opium.team
 servers:
-  - url: https://trade.opium.exchange/v1
+  - url: https://api-test.opium.exchange/v1
 tags:
   - name: Login
     description: Login related endpoints
