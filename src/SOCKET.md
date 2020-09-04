@@ -46,7 +46,7 @@ Asset chart data
 
 ## Data channel `chart:deriv`
 
-Drivative chart data
+Derivative chart data
 
 ### Parameters
 ```
