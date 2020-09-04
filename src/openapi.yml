@@ -392,7 +392,7 @@ paths:
         422:
           description: Unprocessable entity
   /orderbook/cancel:
-    get:
+    put:
       summary: Cancel order that was not matched
       security:
         - bearerAuth: []
