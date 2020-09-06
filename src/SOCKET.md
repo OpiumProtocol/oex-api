@@ -34,12 +34,12 @@ Asset chart data
   a: 'set',
   p: { o, s },
   d: [{
-    o, - open
-    h, - high
-    l, - low
-    c, - close
-    v, - volume
-    t - timestamp
+    o: Number - open
+    h: Number - high
+    l: Number - low
+    c: Number - close
+    v: Number - volume
+    t: Number - timestamp
   }]
 }
 ```
@@ -64,12 +64,12 @@ Derivative chart data
   a: 'set',
   p: { t, s, c },
   d: [{
-    o, - open
-    h, - high
-    l, - low
-    c, - close
-    v, - volume
-    t - timestamp
+    o: Number - open
+    h: Number - high
+    l: Number - low
+    c: Number - close
+    v: Number - volume
+    t: Number - timestamp
   }]
 }
 ```
